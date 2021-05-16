@@ -1,0 +1,171 @@
+<html>
+    <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0"/> <!--320-->
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <meta name="mobile-web-app-capable" content="yes">
+        <meta property="og:image" content="thumbnail.gif" />
+        <title>one a day</title>
+        <style>
+            body{
+                margin: 0;
+            }
+        </style>
+    </head>
+    <body>
+        <script src="./libs/ccapture/CCapture.all.min.js"></script>
+        <script src="./debugger.js"></script>
+        <script src="./captureRecorder.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.3.1/p5.js"></script>
+        <script>
+let canvas;
+
+const debugging = new URLSearchParams(window.location.search).get('debug');
+if (debugging !== null) {
+    debug = new DebugUI();
+    debug.recordBtn.addEventListener('click', () => handleRecordBtnClick())
+    debug.formatSelect.addEventListener('change', () => handleFormatSelectChange())
+
+    recorder = new CCaptureRecorder();
+}
+
+handleRecordBtnClick = function () {
+    if (debug.formatSelect.value == 'thumbnail') {
+        saveThumbnail(renderer.canvas);
+    } else {
+        frameCount = 0;
+        if (recorder) {
+            recorder.setCanvas(canvas.elt);
+            setTimeout(() => {
+                recorder.start();
+                recording = true;
+            }, 20);
+        }
+    }
+}
+
+handleFormatSelectChange = function () {
+    if (debug.formatSelect.value !== 'thumbnail') {
+        recorder.setFormat(debug.formatSelect.value);
+    }
+}
+
+handleComplete = function () {
+    if (recorder) {
+        recorder.stop();
+    }
+    renderer.stop();
+}
+
+/// BEGIN SKETCH
+const colors = ["#496A81", "#66999B", "#B3AF8F", "#FFC482"];
+const backgroundColor = "#ffffff";
+const width = 600;
+const height = 600;
+const totalFrames = 1000;
+let frameCount = 0;
+let recording = false;
+
+let c01 = (g) => {
+  return constrain(g, 0, 1);
+};
+
+let ease = (p) => {
+  p = c01(p);
+  return 3 * p * p - 2 * p * p * p;
+};
+
+function easeInQuint(x) {
+  return x * x * x * x * x;
+}
+
+function easeOutQuart(x) {
+  return 1 - pow(1 - x, 4);
+}
+
+function easeOutExpo(x) {
+  return x === 1 ? 1 : 1 - pow(2, -10 * x);
+}
+
+function setup() {
+  canvas = createCanvas(width, height);
+  noiseSeed(20);
+  let bg = color(backgroundColor);
+  background(bg);
+}
+
+let size = 3;
+let space = 3;
+let count = 70;
+let r, x1, y1, golden;
+
+function draw() {
+  frameCount += 5;
+  let frameDelta = (2 * Math.PI * (frameCount % totalFrames)) / totalFrames;
+  
+  colorMode(RGB);
+  
+  let bg = color(backgroundColor);
+  bg.setAlpha(7);
+  background(bg);
+
+  colorMode(HSB);
+  
+  push();
+
+  translate(width / 2, height / 2);
+  scale(2);
+
+  for (let n = 1; n <= count; n++) {
+    let angle = 2 * PI * n / count;
+
+    golden = radians(180 * (3 - sqrt(5))) + frameCount * 0.01;
+    r = space * sqrt(n) + sin(frameDelta);
+    x1 = 3 * r * cos(golden * n);
+    y1 = 3 * r * sin(golden * n);
+    //z1 = 2 * r * cos(golden * n);
+    zamt = pow(dist(0, 0, x1, y1), 1.1) / 300;
+    _scale = sin(n + frameDelta) * size;
+    _scale *= 1.2 - r / 100;
+
+    let pct = n / count;
+    let colorA = color(colors[3]);
+    let colorB = color(colors[2]);
+    let colorC = color(colors[0]);
+    let colorD = color(colors[1]);
+    pct = ease(pct);
+    let _color = lerpColor(colorB, colorD, pct);
+
+    if (pct < 0.01) {
+      let shrink = map(pct, 0.0, 0.01, 0, 1);
+      _color = lerpColor(colorA, _color, shrink);
+    }
+
+    if (pct > 0.5) {
+      let shrink = map(pct, 0.5, 1, 0, 1);
+      _color = lerpColor(_color, colorC, shrink);
+    }
+
+    let hue = ((frameDelta + angle) / Math.PI) * 360 % 360;
+    _color = color(hue, 255, 255, 255);
+    
+    push();
+    noStroke();
+    fill(_color);
+    translate(x1, y1);
+    circle(0, 0, _scale);
+    pop();
+  }
+
+  pop();
+
+  if (recording) {
+    recorder.update();
+    if (frameDelta == 0) {
+      handleComplete();
+    }
+  }
+}
+
+        </script>
+    </body>
+</html>
